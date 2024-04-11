@@ -84,11 +84,11 @@ def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
                                 distance = math.sqrt(i**2 + j**2)
                                 if distance <= r:
                                     new_fire[x+i][y+j] = "fire"
-                    """play_sound_file("boom.mp3")
+                    play_sound_file("boom.mp3")
                     flash_image(screen,"goodman.png")
                     flash_image(screen,"balqui.jpg")
                     play_sound_file("boom.mp3")
-                    flash_image(screen,"adria.jpg")"""
+                    flash_image(screen,"adria.jpg")
                     new_bombs[x][y] = "burst"
                     
                 
@@ -105,7 +105,7 @@ def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
                             new_humidity[nx][ny] = 0
 
     return new_forest, new_humidity, new_fire, new_bombs
-
+# hola
 def scale_color(value, max_value, min_value):
     """scales  a value between 0 and 255"""
     return int(value/ (max_value) * 170) 
