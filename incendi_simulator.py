@@ -52,7 +52,7 @@ def flash_image(screen, image_file):
     pygame.display.flip()
 
     # Wait for a while
-    time.sleep(0.5)
+    time.sleep(0.3)
     # Update the display
     pygame.display.flip()
 
@@ -84,8 +84,11 @@ def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
                                 distance = math.sqrt(i**2 + j**2)
                                 if distance <= r:
                                     new_fire[x+i][y+j] = "fire"
-                    play_sound_file("boom.mp3")
+                    """play_sound_file("boom.mp3")
+                    flash_image(screen,"goodman.png")
                     flash_image(screen,"balqui.jpg")
+                    play_sound_file("boom.mp3")
+                    flash_image(screen,"adria.jpg")"""
                     new_bombs[x][y] = "burst"
                     
                 
@@ -111,8 +114,8 @@ def scale_color(value, max_value, min_value):
 forests,max_f,min_f = read_data("combustible","combustible_dades")
 humidity,max_h,min_h = read_data("humitat","humitat_dades")
 fire = generate_fire(forests,2)
-bombs = generate_bombs(forests,8)
-print(list(bombs))
+bombs = generate_bombs(forests,15)
+print(list(fire))
 
 
 # Initialize pygame
