@@ -10,7 +10,7 @@ def generate_incendi_data(n,name,sigma = 1,lakes = 0):
     humitat = np.random.rand(n,n)
     df = gaussian_filter(humitat, sigma=sigma)
     for i in range(lakes):
-        df = add_lake(df, random.randint(0,n//8), 8)
+        df = add_lake(df, random.randint(0,n//8), 16)
     dades["max"] = max(df.flatten())*100
     dades["min"] = min(df.flatten())*100
     df = df.flatten()
