@@ -81,26 +81,32 @@ def draw_automaton(automaton, cell_size=1):
 
     pygame.quit()
 def xor(a,b):
-    return (a and not b) or (not a and b)
+    return 1 if (a and not b) or (not a and b) else 0
 
 def nand(a,b):
-    return not (a and b)
+    return 1 if not (a and b) else 0
 
-def combine_automatons(automaton1, automaton2):
+def or_func(a,b):
+    return 1 if a or b else 0
+
+def and_func(a,b):
+    return 1 if a and b else 0
+
+def combine_automatons(automaton1, automaton2, rule=xor):
     if len(automaton1) != len(automaton2):
         raise ValueError("Automatons must have the same number of iterations")
 
     combined = []
     for i in range(len(automaton1)):
-        combined_row = [str((int(cell1) and int(cell2))) for cell1, cell2 in zip(automaton1[i], automaton2[i])]
+        combined_row = [str((rule(int(cell1), int(cell2)))) for cell1, cell2 in zip(automaton1[i], automaton2[i])]
         combined.append(combined_row)
 
     return combined
 
 # Test with rule 139
 automaton1 = cellular_automaton(225, 700)
-automaton2 = cellular_automaton(139, 700)
+automaton2 = cellular_automaton(30, 700)
 automaton3 = cellular_automaton(5, 700)
 combined = combine_automatons(automaton1, automaton2)
-combined_2 = combine_automatons(combined, automaton3)
-draw_automaton(combined)
+combined_2 = combine_automatons(combined, automaton3, rule=nand)
+draw_automaton(combined_2, cell_size=1)
