@@ -1,20 +1,3 @@
-def rule(num):
-    binary = format(num, '08b')
-    rules = {format(7 - i, '03b'): binary[i] for i in range(8)}
-    return rules
-
-def cellular_automaton(rule_num, steps):
-    rules = rule(rule_num)
-    current_state = ['0'] * steps
-    current_state[steps // 2] = '1'  # Start with one cell in the middle
-
-    for _ in range(steps):
-        line = ''.join(current_state).replace('0', '  ').replace('1', '██')
-        print(line.center(steps))  # Center the output
-        current_state = ['0'] + current_state + ['0']
-        current_state = [rules[''.join(current_state[i:i+3])] for i in range(len(current_state) - 2)]
-
-# Test with rule 45
 import pygame
 from time import sleep
 
@@ -104,9 +87,9 @@ def combine_automatons(automaton1, automaton2, rule=xor):
     return combined
 
 # Test with rule 139
-automaton1 = cellular_automaton(225, 700)
-automaton2 = cellular_automaton(30, 700)
-automaton3 = cellular_automaton(5, 700)
+automaton1 = cellular_automaton(129, 300)
+automaton2 = cellular_automaton(30, 300)
+automaton3 = cellular_automaton(5, 300)
 combined = combine_automatons(automaton1, automaton2)
-combined_2 = combine_automatons(combined, automaton3, rule=nand)
-draw_automaton(combined_2, cell_size=1)
+combined_2 = combine_automatons(combined, automaton3, rule=or_func)
+draw_automaton(combined_2, cell_size=2)
