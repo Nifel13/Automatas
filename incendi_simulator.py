@@ -1,257 +1,155 @@
-import pandas as pd
 import pygame
 import numpy as np
-import random
-import math
-import time
 
-class hidroavio():
-    def __init__(self,x,y,charged = False,nearest_fire = False,nearest_water = False):
-        self.x = x
-        self.y = y
-        self.charged = charged
-        self.nearest_fire = nearest_fire
-        self.nearest_water = nearest_water
-        
-    
-    def drop_water(self, fire, humidity):
-        r = 15
-        for i in range(-r, r+1):
-            for j in range(-r, r+1):
-                # Calculate Manhattan distance
-                distance = abs(i) + abs(j)
-                if distance <= r:
-                    nx, ny = self.x + i, self.y + j
-                    if 0 <= nx < fire.shape[0] and 0 <= ny < fire.shape[1]:
-                        if humidity[nx][ny] > 40:
-                            humidity[nx][ny] = humidity[nx][ny]
-                        else:
-                            humidity[nx][ny] += 40
-                        fire[nx][ny] = "0.0"
-    
+# Define constants
+WIDTH, HEIGHT = 800, 800
+CELL_SIZE = 4
+FPS = 3000
+FIRE_COLOR = (255, 0, 0)
+HIGH_COLOR = (200, 255, 0)
+BURN_COLOR = (0, 0, 0)
+VEGETATION_COLOR = (0, 255, 0)
+TERRAIN_COLOR = (128, 128, 128)
+HUMIDITY_COLOR = (0, 0, 255)
 
-    def find_nearest_water(self,humidity):
-        min_distance = 1000000
-        for i in range(humidity.shape[0]):
-            for j in range(humidity.shape[1]):
-                if humidity[i][j] > 700:
-                    distance = math.sqrt((self.x-i)**2 + (self.y-j)**2)
-                    if distance < min_distance:
-                        min_distance = distance
-                        self.nearest_water = (i,j)
+UNBURNED = 0
+BURNING = 1
+BURNING_HIGH = 2
+BURNED = 3
 
-    def real_nearest_fire(self,fire):
-        min_distance = 1000000
-        for i in range(fire.shape[0]):
-            for j in range(fire.shape[1]):
-                if fire[i][j] == "fire":
-                    distance = math.sqrt((self.x-i)**2 + (self.y-j)**2)
-                    if distance < min_distance:
-                        min_distance = distance
-                        self.nearest_fire = (i,j)
-    
-    def move_toward(self,humidity,fire,bombs):
-        if self.charged:
-            if fire[self.x][self.y] == "fire":
-                self.drop_water(fire,humidity)
-                self.charged = False
-            else:
-                bombs[self.x][self.y] = "0.0"
-                if self.x < self.nearest_fire[0]:
-                    self.x += 1
-                elif self.x > self.nearest_fire[0]:
-                    self.x -= 1
-                if self.y < self.nearest_fire[1]:
-                    self.y += 1
-                elif self.y > self.nearest_fire[1]:
-                    self.y -= 1
-                bombs[self.x][self.y] = "plane"
-        else:
-            if humidity[self.x][self.y] >= 700:
-                self.charged = True
-            else:
-                bombs[self.x][self.y] = "0.0"
-                if self.x < self.nearest_water[0]:
-                    self.x += 1
-                elif self.x > self.nearest_water[0]:
-                    self.x -= 1
-                if self.y < self.nearest_water[1]:
-                    self.y += 1
-                elif self.y > self.nearest_water[1]:
-                    self.y -= 1
-                bombs[self.x][self.y] = "plane"
-    def __str__(self):
-        return f"({self.x},{self.y}) charged: {self.charged} nearest_fire: {self.nearest_fire} nearest_water: {self.nearest_water}"
+# Function to read IDRISI .img files
+def read_idrisi_layer(filename):
+    return np.loadtxt(filename+".img")
 
-def read_data(field,dades):
-    dades = pd.read_csv(dades+".csv")
-    rows = dades["rows"][0]
-    field = pd.read_csv(field+".csv")
-    # reshape field so it has rows rows and columns columns
-    field = field.values.reshape(rows, -1)
-    field = field[:rows]
-    max = dades["max"][0]
-    min = dades["min"][0]
-    return field, max, min
-
-def generate_fire(forest,fires):
-    n = forest.shape[0]
-    fire = np.zeros((n,n)).astype(str)
-    for i in range(fires):
-        fire[random.randint(0,n-1)][random.randint(0,n-1)] = "fire"
-    return fire
-
-def random_int(a,z):
-    if z >= 0:
-        return random.randint(0, z)
-    else:
-        return random.randint(z, 0)
-def generate_objects(forest,n_bombs,n_planes):
-    n = forest.shape[0]
-    planes = []
-    bombs = np.zeros((n,n)).astype(str)
-    for i in range(n_bombs):
-        bombs[random.randint(0,n-1)][random.randint(0,n-1)] = "bomb"
-    for i in range(n_planes): 
-        planes.append(hidroavio(random.randint(0,n-1),random.randint(0,n-1)))
-        bombs[planes[i].x][planes[i].y] = "plane"
-    return bombs,planes
-
-def play_sound_file(sound_file_path):
-    pygame.mixer.init()
-    pygame.mixer.music.load(sound_file_path)
-    pygame.mixer.music.play()
-
-
-def flash_image(screen, image_file):
-    image = pygame.image.load(image_file)
-    image = pygame.transform.scale(image, (screen.get_width(), screen.get_height()))
-    screen.blit(image, (screen.get_width()//2 - image.get_width()//2, screen.get_height()//2 - image.get_height()//2))
-    pygame.display.flip()
-    time.sleep(0.3)
-    pygame.display.flip()
-
-def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
-    new_humidity = humidity.copy()
-    new_forest = forest.copy()
-    new_fire = fire.copy()
-    new_bombs = bombs.copy()
-
-
-    # Iterate over each cell in the forest
-    for x in range(forest.shape[0]):
-        for y in range(forest.shape[1]):
-            # If the cell is on fire
-            if fire[x][y] == "fire":
-                # Reduce the forest
-                if forest[x][y] > 0:
-                    new_forest[x][y] -= 1
-                else:
-                    new_fire[x][y] = "burnt"
-
-                if bombs[x][y] == "bomb":
-                    # put on fire all the cells in a radius of r
-                    r = 16
-                    for i in range(-r, r):
-                        for j in range(-r, r):
-                            if 0 <= x+i < forest.shape[0] and 0 <= y+j < forest.shape[1]:
-                                # Calculate Euclidean distance
-                                distance = math.sqrt(i**2 + j**2)
-                                if distance <= r:
-                                    new_fire[x+i][y+j] = "0.0"
-                    play_sound_file("boom.mp3")
-                    flash_image(screen,"goodman.png")
-                    flash_image(screen,"balqui.jpg")
-                    flash_image(screen,"adria.jpg")
-                    flash_image(screen,"reptiliano.png")
-                    new_bombs[x][y] = "burst"
-
-                    
-                
-                for dx, dy in [(-1+random_int(0,windx), 0+random_int(0,windy)), (1+random_int(0,windx), 0+random_int(0,windy)), (0+random_int(0,windx), -1+random_int(0,windy)), (0+random_int(0,windx), 1+random_int(0,windy))]:
-                    nx, ny = x + dx, y + dy
-                    if (0 <= nx < forest.shape[0] and 0 <= ny < forest.shape[1] and
-                        forest[nx][ny] > 0  and humidity[nx][ny] == 0):
-                        new_fire[nx][ny] = "fire"
-
-                    elif (0 <= nx < forest.shape[0] and 0 <= ny < forest.shape[1] and
-                        forest[nx][ny] >0  and humidity[nx][ny] > 0):
-                        new_humidity[nx][ny] -= 10
-                        if new_humidity[nx][ny] < 0:
-                            new_humidity[nx][ny] = 0
-
-            if bombs[x][y] == "plane":
-                    for plane in planes:
-                        plane.real_nearest_fire(new_fire)
-                        plane.find_nearest_water(new_humidity)
-                        plane.move_toward(new_humidity,new_fire,new_bombs)
-
-    return new_forest, new_humidity, new_fire, new_bombs
-
-def scale_color(value, max_value, min_value):
-    """scales  a value between 0 and 255"""
-    return int(value/ (max_value) * 170) 
-
-def print_plane(screen,plane):
-    """creates the image of a plane in the screen on the position of the plane"""
-    image = pygame.image.load("plane.png")
-    image = pygame.transform.scale(image, (3, 3))
-    screen.blit(image, (plane.x * 3, plane.y * 3))
-    pygame.display.flip()
-
-# INICIALITZACIÓ
-forests,max_f,min_f = read_data("combustible","combustible_dades")
-humidity,max_h,min_h = read_data("humitat","humitat_dades")
-fire = generate_fire(forests,2)
-bombs,planes = generate_objects(forests,33,2)
-
-
-# Initialize pygame
-pygame.init()
-
-# Define colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-# Function to draw the grid
-def draw_grid(screen, humidity,forest,fire,bombs, cell_size):
-    n = len(humidity)
-    for i in range(n):
-        for j in range(n):
-            if fire[i][j] == "fire":
-                color = (2*forest[i][j]+random.randint(0,30), 0, 0)
-            elif fire[i][j] == "burnt":
-                color = (0, 0, 0)
-            elif bombs[i][j] == "bomb":
-                color = (116, 0, 199)
-            elif bombs[i][j] == "plane":
-                color = (243, 255, 130)
-            else:
-                color = (0, scale_color(forest[i][j],max_f,min_f), scale_color(humidity[i][j],max_h,min_h))
-            pygame.draw.rect(screen, color, (j * cell_size, i * cell_size, cell_size, cell_size))
+# Function to visualize data
+# Function to visualize data
+def visualize_data(screen, terrain_data, vegetation_data, fire_data, lakes_data, paths_data):
+    for i in range(terrain_data.shape[0]):
+        for j in range(terrain_data.shape[1]):
+            rect = pygame.Rect(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+              # Blue for lakes  # White for paths
+            if vegetation_data[i, j] > 0:
+                # Map vegetation values to shades of green
+                green_value = min(255, int(vegetation_data[i, j] / 100 * 255))  # Adjust range to fit within 0-255
+                pygame.draw.rect(screen, (0, green_value, 0), rect)
+            if lakes_data[i, j] == 100:
+                pygame.draw.rect(screen, (0, 0, 255), rect)
+            if paths_data[i, j] == 1:
+                pygame.draw.rect(screen, (255, 255, 255), rect)
+            
+            if fire_data[i, j] == 1:
+                pygame.draw.rect(screen, FIRE_COLOR, rect)
+            elif fire_data[i, j] == 2:
+                pygame.draw.rect(screen, HIGH_COLOR, rect)
+            elif fire_data[i, j] == 3:
+                pygame.draw.rect(screen, BURN_COLOR, rect)
 
 
 
-# Set up display
-n = forests.shape[0]  # size of the matrix
-cell_size = 3
-width, height = n * cell_size, n * cell_size
-screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Matrix Visualization")
+
+def simulate_fire(screen, terrain_data, vegetation_data, humidity_data, wind_velocity_data, lakes_data, paths_data):
+    # Initialize fire spread data
+    fire_data = np.zeros_like(vegetation_data)
+    fire_duration = np.zeros_like(vegetation_data)
+
+    # Start fire at a random location
+    start_x, start_y = np.random.randint(0, terrain_data.shape[0]), np.random.randint(0, terrain_data.shape[1])
+    fire_data[start_x, start_y] = BURNING
+    fire_duration[start_x, start_y] = 1  # Start counting duration
+
+    # Simulation loop
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        old_fire_data = fire_data.copy()
+        # Update fire spread based on rules
+        for i in range(1, terrain_data.shape[0] - 1):
+            for j in range(1, terrain_data.shape[1] - 1):
+                # Check neighboring cells
+                neighbors = old_fire_data[i-1:i+2, j-1:j+2]
+                if np.any(neighbors == BURNING) or np.any(neighbors == BURNING_HIGH) and fire_data[i, j] == UNBURNED:
+                    if np.any(neighbors == BURNING_HIGH):
+                        base_fire = 2.5
+                    else:
+                        base_fire = 1
+                    if vegetation_data[i, j] > 0:
+                        # Rule 1: The more vegetation, the more probability to burn
+                        vegetation_factor = (vegetation_data[i, j] / 50)
+                    else:
+                        vegetation_factor = 0.9
+
+                    if humidity_data[i, j] < 50:
+                        # Rule 2: The more fuel moisture, the more it takes to start catching fire in that cell
+                        moisture_factor = 2 - (humidity_data[i, j] / 100)
+                    else:
+                        moisture_factor = 1
+
+                    if np.abs(terrain_data[i, j] - terrain_data[start_x, start_y]) <= 10:
+                        # Rule 3: It's more easy to spread fire to a cell that has similar terrain altitude
+                        altitude_factor = 1.3
+                    else:
+                        altitude_factor = 1.1
+
+                    if wind_velocity_data[i, j] > 5:
+                        # Rule 4: It's easier to spread if there's a lot of wind
+                        wind_factor = 1.5
+                    else:
+                        wind_factor = 1
+
+                    if lakes_data[i, j] == 100 or paths_data[i, j] == 1:
+                        # Rule 5: You can't catch lakes on fire and paths are more difficult to burn
+                        fire_data[i, j] = UNBURNED
+                    else:
+                        # Apply factors to fire spread probability
+                        probability = vegetation_factor * moisture_factor * altitude_factor * wind_factor * base_fire
+                        if probability > 2:
+                            if fire_data[i, j] == UNBURNED:
+                                fire_data[i, j] = BURNING
+                                fire_duration[i, j] = 1  # Start counting duration
+
+                if fire_data[i, j] == BURNING:
+                    # Rule 7: Cell goes to burned state after a certain duration
+                    if fire_duration[i, j] >= (vegetation_data[i, j] / 100)*10:
+                        fire_data[i, j] = BURNING_HIGH
+                elif fire_data[i, j] == BURNING_HIGH:
+                    # Rule 8: Burning high cell goes to burned state after a shorter duration
+                    if fire_duration[i, j] >= (vegetation_data[i, j] / 100)*10 + 10:
+                        fire_data[i, j] = BURNED
+
+                # Increment fire duration for burning cells
+                if fire_data[i, j] in [BURNING, BURNING_HIGH]:
+                    fire_duration[i, j] += 1
+        # Visualize data
+        screen.fill((0, 0, 0))
+        visualize_data(screen, terrain_data, vegetation_data, fire_data, lakes_data, paths_data)
+        pygame.display.update()
+        pygame.time.Clock().tick(FPS)
 
 
 
-# Main loop
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-    
-    screen.fill(WHITE)
-    forests, humidity, fire,bombs = fire_in_the_forest(forests, humidity, fire, bombs,-1,1)
-    draw_grid(screen, humidity, forests,fire, bombs, cell_size)
-    # print the number of fires
-    pygame.display.flip()
+# Main function
+def main():
+    global CELL_SIZE
+    # Initialize Pygame
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Fire Simulation")
 
-# Quit pygame
-pygame.quit()
+    # Read data files
+    terrain_data = read_idrisi_layer("fire_simulation_terrain")
+    CELL_SIZE = WIDTH / terrain_data.shape[0]
+    vegetation_data = read_idrisi_layer("fire_simulation_vegetation")
+    humidity_data = read_idrisi_layer("fire_simulation_humidity")
+    wind_velocity_data = read_idrisi_layer("fire_simulation_wind_velocity")
+    lakes_data = read_idrisi_layer("fire_simulation_lake")
+    paths_data = read_idrisi_layer("fire_simulation_path")
+
+    # Simulate fire propagation
+    simulate_fire(screen, terrain_data, vegetation_data, humidity_data,wind_velocity_data, lakes_data, paths_data)
+
+# Entry point
+if __name__ == "__main__":
+    main()
