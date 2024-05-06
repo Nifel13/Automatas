@@ -1,5 +1,4 @@
 from data_generator import DataGenerator
-from simulation_visualizer import FireVisualizer
 from hidroplane import Hidroavio
 import pandas as pd
 import numpy as np
