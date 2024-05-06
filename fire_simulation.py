@@ -73,7 +73,7 @@ class FireSimulation:
 
 
         
-    def simulate_fire(self, steps, wind, n_planes = 1):
+    def simulate_fire(self, steps, wind, n_fires = 2, n_planes = 0):
         self.steps = steps
         self.wind_effect = self.calculate_wind(wind[0], wind[1])
         self.fire_data = self.fire.copy()
@@ -97,7 +97,7 @@ class FireSimulation:
             self.hidroavions.append(Hidroavio(np.random.randint(0,self.n-1),np.random.randint(0,self.n-1)))
             self.planes[self.hidroavions[i].x, self.hidroavions[i].y] = 1
 
-        for _ in range(1):
+        for _ in range(n_fires):
             a = True
             while a:
                 x = np.random.randint(0, self.n)
@@ -107,7 +107,7 @@ class FireSimulation:
                     a = False
 
         for iter in range(steps):
-            state = self.propagate_fire(wind, iter)
+            state = self.propagate_fire(self.wind_effect, iter)
             self.states.append(state[0].copy())
             self.planes_steps.append(state[1].copy())
     def __random_int(self, a, z):
@@ -136,7 +136,7 @@ class FireSimulation:
                     self.fire_time[x, y] += 1
 
                     
-                    offsets = [(self.__random_int(0, wind[0]), self.__random_int(0, wind[1])) for _ in range(4)]
+                    offsets = [(self.__random_int(0, wind[x, y][0]), self.__random_int(0, wind[x,y][1])) for _ in range(4)]
                     directions = [(-1 + offsets[0][0], 0 + offsets[0][1]),
                         (1 + offsets[1][0], 0 + offsets[1][1]),
                         (0 + offsets[2][0], -1 + offsets[2][1]),
@@ -154,9 +154,9 @@ class FireSimulation:
                                 self.temperature[nx, ny] += 5
                             else:
                                 self.temperature[nx, ny] += 3 if self.temperature[nx, ny] < 60 else 0
-        if step > 20:
+        if step > 50:
             for plane in self.hidroavions:
-                self.planes = plane.move_toward(self.humidity_data,self.fire_data,self.planes, self.biomes)
+                self.planes = plane.move_toward(self.humidity_data,self.fire_data,self.planes, self.biomes, self.temperature)
         return self.fire_data, self.planes.copy()
     def visualize_fire_expansion(self):
         pygame.init()
@@ -210,9 +210,9 @@ class FireSimulation:
                     
 
     
-a = FireSimulation(100, seed = 40, generator_seed=2)
+a = FireSimulation(100, seed = 93, generator_seed=1)
 a.generate_data()
 a.read_data()
-a.simulate_fire(1000, (-1,1))
+a.simulate_fire(1000, (1,1))
 a.visualize_fire_expansion()
 print(max(a.states[-1].flatten()))

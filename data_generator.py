@@ -86,7 +86,7 @@ class DataGenerator():
         vegetation_data = np.round(np.random.normal(50, 20, (n, n)))
 
         # Afegim clarianes (lo que abans fèiem pels llacs) i afegim deserts
-        radius = random.randint(n, n)
+        radius = 50
         center_x, center_y = random.randint(0, n), random.randint(0, n)
         deformation_factor = 0
         for _ in range(clarianes):

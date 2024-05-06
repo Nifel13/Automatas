@@ -31,7 +31,7 @@ class Hidroavio():
                         min_distance = distance
                         self.nearest_fire = (i,j)
     
-    def drop_water(self, fire, humidity):
+    def drop_water(self, fire, humidity, temperature):
         r = 5
         for i in range(-r, r+1):
             for j in range(-r, r+1):
@@ -42,15 +42,16 @@ class Hidroavio():
                             humidity[nx][ny] = humidity[nx][ny]
                         else:
                             humidity[nx][ny] += 40
+                        temperature[nx][ny] -= 15
                         fire[nx,ny] = 0  # Swap the array indices
 
         self.find_nearest_water(humidity)
 
-    def move_toward(self,humidity,fire,bombs, biomes):
+    def move_toward(self,humidity,fire,bombs, biomes, temperature):
         if self.charged:
             if fire[self.x, self.y] in [1, 2]:
                 self.real_nearest_fire(fire)
-                self.drop_water(fire,humidity)
+                self.drop_water(fire,humidity, temperature)
                 self.charged = False
             else:
                 self.real_nearest_fire(fire)
