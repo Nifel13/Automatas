@@ -2,10 +2,12 @@ from scipy.ndimage import gaussian_filter
 import numpy as np
 import random
 from perlin_noise import PerlinNoise
+import matplotlib.pyplot as plt
 
 class DataGenerator():
-    def __init__(self, seed = 42):
+    def __init__(self, seed = 42, n = 100):
         self.seed = seed
+        self.n = n
         pass
 
     def generate_elevation(self, wavelength = 0.5, redistribution = 1.05):
@@ -15,6 +17,16 @@ class DataGenerator():
         elevation_data += abs(np.min(elevation_data))
         elevation_data *= 100
         return np.power(elevation_data, redistribution)
+    
+    def visualize_elevation(self):
+        elevation_data = self.generate_elevation()
+        plt.figure(figsize=(8, 6))
+        plt.imshow(elevation_data, cmap='terrain', origin='lower')
+        plt.colorbar(label='Elevation')
+        plt.title('Elevation Map')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.show()
 
     def generate_humidity(self, wavelength = 1, redistribution = 1):
 
@@ -165,3 +177,9 @@ legend cats : 0"""
         np.savetxt(filename+".img", data.flatten(), fmt="%d")
         with open(filename+".doc", "w") as f:
             f.write(metadata)
+
+seed = 123  # Example seed value
+n = 100  # Example size of the elevation map
+my_object = DataGenerator(seed, n)
+my_object.generate_elevation()
+my_object.visualize_elevation()
