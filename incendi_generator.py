@@ -44,6 +44,6 @@ def add_lake(data_matrix, r, humidity,deformation_factor_inc=15):
     
     
 
-generate_incendi_data(200,"humitat",1,2)
+generate_incendi_data(200,"humitat",1,4)
 generate_incendi_data(200,"combustible")
 

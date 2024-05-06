@@ -13,22 +13,7 @@ class hidroavio():
         self.nearest_fire = nearest_fire
         self.nearest_water = nearest_water
         
-    
-    def drop_water(self, fire, humidity):
-        r = 15
-        for i in range(-r, r+1):
-            for j in range(-r, r+1):
-                # Calculate Manhattan distance
-                distance = abs(i) + abs(j)
-                if distance <= r:
-                    nx, ny = self.x + i, self.y + j
-                    if 0 <= nx < fire.shape[0] and 0 <= ny < fire.shape[1]:
-                        if humidity[nx][ny] > 40:
-                            humidity[nx][ny] = humidity[nx][ny]
-                        else:
-                            humidity[nx][ny] += 40
-                        fire[nx][ny] = "0.0"
-    
+
 
     def find_nearest_water(self,humidity):
         min_distance = 1000000
@@ -50,12 +35,27 @@ class hidroavio():
                         min_distance = distance
                         self.nearest_fire = (i,j)
     
+    def drop_water(self, fire, humidity):
+        r = 15
+        for i in range(-r, r+1):
+            for j in range(-r, r+1):
+                nx, ny = self.nearest_fire[0] + i, self.nearest_fire[1] + j
+                if 0 <= nx < fire.shape[1] and 0 <= ny < fire.shape[0]:  # Swap the shape indices
+                    if humidity[nx][ny] > 40:  # Swap the array indices
+                        humidity[nx][ny] = humidity[nx][ny]
+                    else:
+                        humidity[nx][ny] += 40
+                    fire[nx][ny] = "0.0"  # Swap the array indices
+
+        self.find_nearest_water(humidity)
+
     def move_toward(self,humidity,fire,bombs):
         if self.charged:
             if fire[self.x][self.y] == "fire":
                 self.drop_water(fire,humidity)
                 self.charged = False
             else:
+                self.real_nearest_fire(fire)
                 bombs[self.x][self.y] = "0.0"
                 if self.x < self.nearest_fire[0]:
                     self.x += 1
@@ -70,6 +70,8 @@ class hidroavio():
             if humidity[self.x][self.y] >= 700:
                 self.charged = True
             else:
+                if self.nearest_water == False:
+                    self.find_nearest_water(humidity)
                 bombs[self.x][self.y] = "0.0"
                 if self.x < self.nearest_water[0]:
                     self.x += 1
@@ -117,19 +119,6 @@ def generate_objects(forest,n_bombs,n_planes):
         bombs[planes[i].x][planes[i].y] = "plane"
     return bombs,planes
 
-def play_sound_file(sound_file_path):
-    pygame.mixer.init()
-    pygame.mixer.music.load(sound_file_path)
-    pygame.mixer.music.play()
-
-
-def flash_image(screen, image_file):
-    image = pygame.image.load(image_file)
-    image = pygame.transform.scale(image, (screen.get_width(), screen.get_height()))
-    screen.blit(image, (screen.get_width()//2 - image.get_width()//2, screen.get_height()//2 - image.get_height()//2))
-    pygame.display.flip()
-    time.sleep(0.3)
-    pygame.display.flip()
 
 def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
     new_humidity = humidity.copy()
@@ -148,25 +137,6 @@ def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
                     new_forest[x][y] -= 1
                 else:
                     new_fire[x][y] = "burnt"
-
-                if bombs[x][y] == "bomb":
-                    # put on fire all the cells in a radius of r
-                    r = 16
-                    for i in range(-r, r):
-                        for j in range(-r, r):
-                            if 0 <= x+i < forest.shape[0] and 0 <= y+j < forest.shape[1]:
-                                # Calculate Euclidean distance
-                                distance = math.sqrt(i**2 + j**2)
-                                if distance <= r:
-                                    new_fire[x+i][y+j] = "0.0"
-                    play_sound_file("boom.mp3")
-                    flash_image(screen,"goodman.png")
-                    flash_image(screen,"balqui.jpg")
-                    flash_image(screen,"adria.jpg")
-                    flash_image(screen,"reptiliano.png")
-                    new_bombs[x][y] = "burst"
-
-                    
                 
                 for dx, dy in [(-1+random_int(0,windx), 0+random_int(0,windy)), (1+random_int(0,windx), 0+random_int(0,windy)), (0+random_int(0,windx), -1+random_int(0,windy)), (0+random_int(0,windx), 1+random_int(0,windy))]:
                     nx, ny = x + dx, y + dy
@@ -182,8 +152,6 @@ def fire_in_the_forest(forest, humidity,fire,bombs,windx=0,windy=0):
 
             if bombs[x][y] == "plane":
                     for plane in planes:
-                        plane.real_nearest_fire(new_fire)
-                        plane.find_nearest_water(new_humidity)
                         plane.move_toward(new_humidity,new_fire,new_bombs)
 
     return new_forest, new_humidity, new_fire, new_bombs
@@ -192,18 +160,13 @@ def scale_color(value, max_value, min_value):
     """scales  a value between 0 and 255"""
     return int(value/ (max_value) * 170) 
 
-def print_plane(screen,plane):
-    """creates the image of a plane in the screen on the position of the plane"""
-    image = pygame.image.load("plane.png")
-    image = pygame.transform.scale(image, (3, 3))
-    screen.blit(image, (plane.x * 3, plane.y * 3))
-    pygame.display.flip()
 
 # INICIALITZACIÓ
 forests,max_f,min_f = read_data("combustible","combustible_dades")
 humidity,max_h,min_h = read_data("humitat","humitat_dades")
+print(max_f,min_f,max_h,min_h)
 fire = generate_fire(forests,2)
-bombs,planes = generate_objects(forests,33,2)
+bombs,planes = generate_objects(forests,0,1)
 
 
 # Initialize pygame
@@ -221,8 +184,6 @@ def draw_grid(screen, humidity,forest,fire,bombs, cell_size):
                 color = (2*forest[i][j]+random.randint(0,30), 0, 0)
             elif fire[i][j] == "burnt":
                 color = (0, 0, 0)
-            elif bombs[i][j] == "bomb":
-                color = (116, 0, 199)
             elif bombs[i][j] == "plane":
                 color = (243, 255, 130)
             else:
@@ -233,12 +194,15 @@ def draw_grid(screen, humidity,forest,fire,bombs, cell_size):
 
 # Set up display
 n = forests.shape[0]  # size of the matrix
-cell_size = 3
+cell_size = 4
 width, height = n * cell_size, n * cell_size
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Matrix Visualization")
 
+font = pygame.font.Font(None, 36)
 
+# Initialize iteration counter
+iteration = 0
 
 # Main loop
 running = True
@@ -248,9 +212,14 @@ while running:
             running = False
     
     screen.fill(WHITE)
-    forests, humidity, fire,bombs = fire_in_the_forest(forests, humidity, fire, bombs,-1,1)
+    forests, humidity, fire,bombs = fire_in_the_forest(forests, humidity, fire, bombs,0,0)
     draw_grid(screen, humidity, forests,fire, bombs, cell_size)
+    text = font.render(f"Iteration: {iteration}", True, (255, 255, 255))
+    text_background = pygame.Surface(text.get_size())
+    text_background.fill(WHITE)
+    screen.blit(text, (10, 10))
     # print the number of fires
+    iteration += 1
     pygame.display.flip()
 
 # Quit pygame
