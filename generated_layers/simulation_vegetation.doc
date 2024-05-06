@@ -1,22 +1,21 @@
 file title  : Vegetation
-                data type   : string
-                file type   : ascii
-                columns     : 1
-                rows        : 100
-                ref.system  : plane
-                ref.units   : m
-                unit dist.  : 1
-                min. X      : 0
-                max. X      : 100
-                min. Y      : 0
-                max. Y      : 100
-                pos 'n error: unknown
-                resolution  : 1
-                min. value  : 3.3530066994415195
-                max. value  : 79.40090846861673
-                Value units : unspecified
-                Value Error : unknown
-                flag Value  : none
-                flag def 'n : none
-                legend cats : 0
-                
+data type   : string
+file type   : ascii
+columns     : 1
+rows        : 100
+ref.system  : plane
+ref.units   : m
+unit dist.  : 1
+min. X      : 0
+max. X      : 100
+min. Y      : 0
+max. Y      : 100
+pos 'n error: unknown
+resolution  : 1
+min. value  : 0.7544972001927809
+max. value  : 79.48063043441738
+Value units : unspecified
+Value Error : unknown
+flag Value  : none
+flag def 'n : none
+legend cats : 0

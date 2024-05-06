@@ -4,22 +4,21 @@ import random
 from perlin_noise import PerlinNoise
 
 class DataGenerator():
-    def __init__(self):
+    def __init__(self, seed = 42):
+        self.seed = seed
         pass
 
-    def generate_elevation(self, wavelength = 1, redistribution = 1):
-        noise = PerlinNoise(octaves=10, seed=1)
+    def generate_elevation(self, wavelength = 0.5, redistribution = 1.05):
+        noise = PerlinNoise(octaves=6, seed=self.seed)
         xpix, ypix = self.n, self.n
-        elevation_data = np.array([[noise([wavelength*(i/xpix), wavelength*(j/ypix)]) for j in range(xpix)] for i in range(ypix)])
+        elevation_data = np.array([[noise([wavelength*((i/xpix)-0.5), wavelength*((j/ypix)-0.5)]) for j in range(xpix)] for i in range(ypix)])
         elevation_data += abs(np.min(elevation_data))
         elevation_data *= 100
-        print(np.max(elevation_data))
-        print(np.power(elevation_data, redistribution))
         return np.power(elevation_data, redistribution)
 
-    def generate_humidity(self, wavelength = 1, redistribution = 0.5):
+    def generate_humidity(self, wavelength = 1, redistribution = 1):
 
-        noise = PerlinNoise(octaves=2, seed=1)
+        noise = PerlinNoise(octaves=2, seed=self.seed)
         xpix, ypix = self.n, self.n
         humidity_data = np.array([[noise([wavelength*(i/xpix), wavelength*(j/ypix)]) for j in range(xpix)] for i in range(ypix)])
 
@@ -28,7 +27,7 @@ class DataGenerator():
         humidity_data /= np.max(humidity_data)
         humidity_data *= 100
         # return np.random.randint(0, 100, (self.n, self.n))
-        return humidity_data
+        return np.power(humidity_data, redistribution)
         
     
     def generate_temperature_biome(self, nivell_mar = 40, nivell_muntanya = 90, jungla = 70, desert = 20):
@@ -65,7 +64,22 @@ class DataGenerator():
                         temperature[x, y] = 25
                         biomes[x,y] = 3
         self.biomes_data = biomes
+        self.add_humidity_near_lakes()
         return temperature, biomes
+    
+    def add_humidity_near_lakes(self):
+        # Create a copy of the humidity array to avoid modifying the original array
+        new_humidity_array = np.copy(self.humidity_data)
+        # Iterate over each element in the humidity array
+        for i in range(len(new_humidity_array)):
+            for j in range(len(new_humidity_array[0])):
+                if self.biomes_data[i][j] == 0:
+                    for dx in range(-5, 6):
+                        for dy in range(-5, 6):
+                            x, y = i + dx, j + dy
+                            if 0 <= x < len(new_humidity_array) and 0 <= y < len(new_humidity_array[0]):
+                                new_humidity_array[x][y] += 10 if new_humidity_array[x][y] < 100 else 0
+        self.humidity_data = new_humidity_array
     
     def generate_vegetation(self, clarianes = 1):
         n = self.n
@@ -85,7 +99,7 @@ class DataGenerator():
         for i in range(n):
             for j in range(n):
                 if self.biomes_data[i, j] == 1:
-                        vegetation_data[i, j] = np.abs(np.round(np.random.normal(5, 5)))
+                    vegetation_data[i, j] = np.abs(np.round(np.random.normal(2, 2)))
                 elif self.biomes_data[i, j] == 3:
                     vegetation_data[i, j] = np.round(np.random.normal(70, 10))
                 elif self.biomes_data[i, j] == 4:
@@ -102,11 +116,13 @@ class DataGenerator():
         self.save_idrisi_layer(self.elevation_data, name+"_elevation", file_title="Elevation")
 
         self.humidity_data = self.generate_humidity()
-        self.save_idrisi_layer(self.humidity_data, name+"_humidity", file_title="Humidity")
 
         temperature, biomes = self.generate_temperature_biome()
         self.save_idrisi_layer(temperature, name+"_temperature", file_title="Temperature")
         self.save_idrisi_layer(biomes, name+"_biomes", file_title="Biomes")
+
+        self.save_idrisi_layer(self.humidity_data, name+"_humidity", file_title="Humidity")
+
 
         vegetation = self.generate_vegetation()
         self.save_idrisi_layer(vegetation, name+"_vegetation", file_title="Vegetation")
@@ -126,27 +142,26 @@ class DataGenerator():
             min_value = np.min(data)
         
         metadata = f"""file title  : {file_title}
-                data type   : string
-                file type   : ascii
-                columns     : {columns}
-                rows        : {rows}
-                ref.system  : plane
-                ref.units   : m
-                unit dist.  : {resolution}
-                min. X      : {min_x}
-                max. X      : {max_x}
-                min. Y      : {min_y}
-                max. Y      : {max_y}
-                pos 'n error: unknown
-                resolution  : {resolution}
-                min. value  : {min_value}
-                max. value  : {max_value}
-                Value units : {value_units}
-                Value Error : unknown
-                flag Value  : none
-                flag def 'n : none
-                legend cats : 0
-                """
+data type   : string
+file type   : ascii
+columns     : {columns}
+rows        : {rows}
+ref.system  : plane
+ref.units   : m
+unit dist.  : {resolution}
+min. X      : {min_x}
+max. X      : {max_x}
+min. Y      : {min_y}
+max. Y      : {max_y}
+pos 'n error: unknown
+resolution  : {resolution}
+min. value  : {min_value}
+max. value  : {max_value}
+Value units : {value_units}
+Value Error : unknown
+flag Value  : none
+flag def 'n : none
+legend cats : 0"""
         np.savetxt(filename+".img", data.flatten(), fmt="%d")
         with open(filename+".doc", "w") as f:
             f.write(metadata)
